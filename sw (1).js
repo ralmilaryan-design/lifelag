@@ -1,7 +1,7 @@
 const CACHE_NAME = 'lifelog-v1';
 const urlsToCache = [
     './',
-    './lifelog.html',
+    './index.html',
     './manifest.json'
 ];
 
