@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LifeLog">
+    <meta name="description" content="Private offline time tracker - every second of your life">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    
+    <title>LifeLog</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #0f0f0f;
+            --surface2: #1a1a1a;
+            --surface3: #252525;
+            --border: #2a2a2a;
+            --text: #ffffff;
+            --text2: #a0a0a0;
+            --accent: #00e5ff;
+            --accent-dim: rgba(0,229,255,0.1);
+            --danger: #ff5252;
+            --success: #69f0ae;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Install Banner */
+        .install-banner {
+            background: linear-gradient(135deg, var(--accent-dim), rgba(0,229,255,0.05));
+            border: 1px solid var(--accent);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin: 0 16px 12px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            animation: slideDown 0.3s ease;
+        }
+        .install-banner.show { display: flex; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .install-text { font-size: 14px; font-weight: 600; }
+        .install-text span { display: block; font-size: 12px; color: var(--text2); font-weight: 400; margin-top: 2px; }
+        .install-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .install-close {
+            background: none;
+            border: none;
+            color: var(--text2);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        
+        /* Header */
+        .header {
+            padding: 16px 20px 8px;
+            background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+        .header h1 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .header .date-display {
+            font-size: 14px;
+            color: var(--text2);
+            margin-top: 2px;
+        }
+        
+        /* Main Content */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            scrollbar-width: thin;
+            scrollbar-color: var(--surface3) var(--bg);
+        }
+        .content::-webkit-scrollbar { width: 4px; }
+        .content::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+        
+        .view {
+            display: none;
+            padding: 16px 16px 100px;
+            animation: fadeIn 0.2s ease;
+        }
+        .view.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* NOW VIEW */
+        .now-clock {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .now-time {
+            font-size: 52px;
+            font-weight: 200;
+            letter-spacing: -1px;
+            font-variant-numeric: tabular-nums;
+            color: var(--text);
+        }
+        .now-date {
+            font-size: 15px;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+        
+        .current-activity-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .current-activity-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--current-color, var(--accent));
+            box-shadow: 0 0 20px var(--current-color, var(--accent));
+        }
+        .current-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text2);
+            margin-bottom: 8px;
+        }
+        .current-name {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .current-duration {
+            font-size: 18px;
+            color: var(--text2);
+            font-variant-numeric: tabular-nums;
+        }
+        .current-since {
+            font-size: 12px;
+            color: var(--text2);
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+        
+        .section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text2);
+            margin: 24px 0 12px;
+            font-weight: 600;
+        }
+        
+        .activity-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .activity-btn {
+            background: var(--surface2);
+            border: 1.5px solid transparent;
+            border-radius: 16px;
+            padding: 16px 8px;
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+        }
+        .activity-btn:active { transform: scale(0.96); }
+        .activity-btn .act-icon { font-size: 24px; }
+        .activity-btn.active {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+        .activity-btn.active .act-name { color: var(--accent); }
+        
+        /* TIMELINE VIEW */
+        .day-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            background: var(--surface);
+            border-radius: 14px;
+            padding: 12px 16px;
+        }
+        .day-nav button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 12px;
+        }
+        .day-nav .day-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 12px 14px;
+            border-left: 4px solid var(--item-color, var(--surface3));
+            transition: background 0.15s;
+        }
+        .timeline-item:active { background: var(--surface2); }
+        .timeline-time {
+            font-size: 13px;
+            color: var(--text2);
+            width: 90px;
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+        }
+        .timeline-info { flex: 1; }
+        .timeline-name {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .timeline-duration {
+            font-size: 12px;
+            color: var(--text2);
+        }
+        .timeline-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--surface3);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .timeline-bar-fill {
+            height: 100%;
+            background: var(--item-color);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        
+        .empty-day {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text2);
+        }
+        .empty-day .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        
+        /* HISTORY VIEW */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .cal-header {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text2);
+            padding: 8px 0;
+            text-transform: uppercase;
+        }
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            color: var(--text2);
+        }
+        .cal-day:active { transform: scale(0.9); }
+        .cal-day.today {
+            border: 2px solid var(--accent);
+            color: var(--accent);
+        }
+        .cal-day.has-data {
+            background: var(--surface2);
+            color: var(--text);
+        }
+        .cal-day .dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            bottom: 4px;
+        }
+        
+        .cal-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            background: var(--surface);
+            border-radius: 14px;
+            padding: 12px 16px;
+        }
+        .cal-nav button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 12px;
+        }
+        .cal-nav h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        /* STATS VIEW */
+        .period-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .period-tab {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text2);
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .period-tab.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+        
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .stat-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .stat-value {
+            font-size: 13px;
+            color: var(--text2);
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-bar-bg {
+            width: 100%;
+            height: 4px;
+            background: var(--surface2);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .stat-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        
+        /* SETTINGS VIEW */
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .setting-item:active { background: var(--surface2); }
+        .setting-item.danger { border-color: var(--danger); }
+        .setting-left { flex: 1; }
+        .setting-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .setting-desc {
+            font-size: 13px;
+            color: var(--text2);
+        }
+        .setting-arrow {
+            color: var(--text2);
+            font-size: 18px;
+        }
+        
+        /* Buttons */
+        .btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        .nav-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text2);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.15s;
+            letter-spacing: 0.5px;
+        }
+        .nav-btn .nav-icon { font-size: 22px; }
+        .nav-btn.active { color: var(--accent); }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--surface2);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 340px;
+            border: 1px solid var(--border);
+            animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .modal-text {
+            font-size: 15px;
+            color: var(--text2);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .modal-actions { display: flex; gap: 10px; }
+        .modal-actions .btn { margin: 0; }
+        .modal-actions .btn-secondary {
+            background: var(--surface3);
+            color: var(--text);
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--surface2);
+            color: var(--text);
+            padding: 14px 24px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        /* Input */
+        input[type="text"], input[type="color"] {
+            width: 100%;
+            padding: 14px;
+            background: var(--surface3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 16px;
+            margin-bottom: 10px;
+            outline: none;
+        }
+        input[type="text"]:focus { border-color: var(--accent); }
+        
+        .hidden-file { display: none; }
+        
+        /* Offline indicator */
+        .offline-badge {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: var(--danger);
+            color: #fff;
+            text-align: center;
+            padding: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 3000;
+            transform: translateY(-100%);
+            transition: transform 0.3s;
+        }
+        .offline-badge.show { transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="offline-badge" id="offlineBadge">● Offline Mode</div>
+
+<div class="header">
+    <h1>LifeLog</h1>
+    <div class="date-display" id="headerDate">Loading...</div>
+</div>
+
+<!-- Install Banner -->
+<div class="install-banner" id="installBanner">
+    <div class="install-text">
+        Install LifeLog
+        <span>Add to home screen for offline use</span>
+    </div>
+    <button class="install-btn" id="installBtn">Install</button>
+    <button class="install-close" onclick="dismissInstall()">×</button>
+</div>
+
+<div class="content">
+    <!-- NOW VIEW -->
+    <div id="view-now" class="view active">
+        <div class="now-clock">
+            <div class="now-time" id="clockTime">00:00:00</div>
+            <div class="now-date" id="clockDate">...</div>
+        </div>
+        
+        <div class="current-activity-card" id="currentCard">
+            <div class="current-label">Current Activity</div>
+            <div class="current-name" id="currentName">Unknown</div>
+            <div class="current-duration" id="currentDuration">00:00:00</div>
+            <div class="current-since" id="currentSince">Started at --:--</div>
+        </div>
+        
+        <div class="section-title">Switch Activity</div>
+        <div class="activity-grid" id="activityGrid"></div>
+        
+        <div class="section-title">Quick Add</div>
+        <div style="display:flex; gap:8px;">
+            <input type="text" id="customName" placeholder="Activity name..." style="flex:1; margin:0;">
+            <button class="btn btn-primary" style="width:auto; padding:14px 20px; margin:0;" onclick="addCustomAndStart()">Start</button>
+        </div>
+    </div>
+
+    <!-- TIMELINE VIEW -->
+    <div id="view-timeline" class="view">
+        <div class="day-nav">
+            <button onclick="changeDay(-1)">‹</button>
+            <div class="day-title" id="timelineDate">Today</div>
+            <button onclick="changeDay(1)">›</button>
+        </div>
+        <div id="timelineContent">
+            <div class="empty-day">
+                <div class="icon">📭</div>
+                <div>No data for this day</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div id="view-history" class="view">
+        <div class="cal-nav">
+            <button onclick="changeMonth(-1)">‹</button>
+            <h3 id="calMonth">Month</h3>
+            <button onclick="changeMonth(1)">›</button>
+        </div>
+        <div class="calendar-grid" id="calGrid"></div>
+        <div id="daySummary" style="margin-top:20px;"></div>
+    </div>
+
+    <!-- STATS VIEW -->
+    <div id="view-stats" class="view">
+        <div class="period-tabs">
+            <button class="period-tab active" onclick="setPeriod('week')">Week</button>
+            <button class="period-tab" onclick="setPeriod('month')">Month</button>
+            <button class="period-tab" onclick="setPeriod('year')">Year</button>
+            <button class="period-tab" onclick="setPeriod('all')">All</button>
+        </div>
+        <div id="statsContent"></div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div id="view-settings" class="view">
+        <div class="section-title">PWA Status</div>
+        <div class="setting-item" style="cursor:default;">
+            <div class="setting-left">
+                <div class="setting-title" id="pwaStatus">Checking...</div>
+                <div class="setting-desc" id="pwaDesc">Service worker status</div>
+            </div>
+        </div>
+        
+        <div class="section-title">Data</div>
+        <div class="setting-item" onclick="exportData()">
+            <div class="setting-left">
+                <div class="setting-title">Export Data</div>
+                <div class="setting-desc">Download JSON backup</div>
+            </div>
+            <span class="setting-arrow">›</span>
+        </div>
+        <div class="setting-item" onclick="document.getElementById('importFile').click()">
+            <div class="setting-left">
+                <div class="setting-title">Import Data</div>
+                <div class="setting-desc">Restore from JSON file</div>
+            </div>
+            <span class="setting-arrow">›</span>
+        </div>
+        <input type="file" id="importFile" class="hidden-file" onchange="importData(this)">
+        
+        <div class="section-title" style="margin-top:24px;">Danger Zone</div>
+        <div class="setting-item danger" onclick="showResetModal()">
+            <div class="setting-left">
+                <div class="setting-title">Reset All Data</div>
+                <div class="setting-desc">Permanently delete everything</div>
+            </div>
+            <span class="setting-arrow">›</span>
+        </div>
+        
+        <div style="margin-top:40px; text-align:center; color:var(--text2); font-size:12px;">
+            LifeLog PWA v1.0 • Private & Offline
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+    <button class="nav-btn active" onclick="showView('now')">
+        <span class="nav-icon">●</span>
+        <span>NOW</span>
+    </button>
+    <button class="nav-btn" onclick="showView('timeline')">
+        <span class="nav-icon">▬</span>
+        <span>DAY</span>
+    </button>
+    <button class="nav-btn" onclick="showView('history')">
+        <span class="nav-icon">▦</span>
+        <span>MO</span>
+    </button>
+    <button class="nav-btn" onclick="showView('stats')">
+        <span class="nav-icon">◈</span>
+        <span>%</span>
+    </button>
+    <button class="nav-btn" onclick="showView('settings')">
+        <span class="nav-icon">◎</span>
+        <span>SET</span>
+    </button>
+</nav>
+
+<!-- Reset Modal -->
+<div class="modal-overlay" id="resetModal">
+    <div class="modal">
+        <div class="modal-title">Reset Everything?</div>
+        <div class="modal-text">This will permanently delete all your tracked time data. This cannot be undone.</div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" style="flex:1;" onclick="hideResetModal()">Cancel</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="resetAll()">Delete All</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== CONFIG ====================
+const DEFAULT_ACTIVITIES = {
+    sleep:  { name: 'Sleep',   color: '#3f51b5', icon: '🌙' },
+    work:   { name: 'Work',    color: '#4caf50', icon: '💼' },
+    eat:    { name: 'Eat',     color: '#ff9800', icon: '🍽️' },
+    phone:  { name: 'Phone',   color: '#9c27b0', icon: '📱' },
+    walk:   { name: 'Walk',    color: '#009688', icon: '🚶' },
+    gym:    { name: 'Exercise',color: '#f44336', icon: '💪' },
+    read:   { name: 'Read',    color: '#2196f3', icon: '📖' },
+    chill:  { name: 'Chill',   color: '#607d8b', icon: '🛋️' },
+    travel: { name: 'Travel',  color: '#ff5722', icon: '🚗' },
+    shower: { name: 'Shower',  color: '#00bcd4', icon: '🚿' }
+};
+
+const UNKNOWN = { name: 'Unknown', color: '#424242', icon: '❓' };
+
+// ==================== STATE ====================
+let state = {
+    activities: {},
+    logs: {},
+    current: null,
+    custom: {},
+    viewDate: new Date(),
+    calDate: new Date(),
+    statsPeriod: 'week'
+};
+
+let deferredPrompt = null;
+
+// ==================== PWA INSTALL ====================
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+        document.getElementById('installBanner').classList.add('show');
+    }
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        document.getElementById('installBanner').classList.remove('show');
+    }
+    deferredPrompt = null;
+});
+
+function dismissInstall() {
+    document.getElementById('installBanner').classList.remove('show');
+    localStorage.setItem('lifelog_install_dismissed', Date.now());
+}
+
+// ==================== SERVICE WORKER ====================
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+        .then(reg => {
+            console.log('SW registered');
+            updatePWAStatus('Active', 'App works offline');
+        })
+        .catch(err => {
+            console.log('SW failed', err);
+            updatePWAStatus('Failed', 'Offline mode unavailable');
+        });
+} else {
+    updatePWAStatus('Unsupported', 'Your browser does not support offline mode');
+}
+
+function updatePWAStatus(title, desc) {
+    const el = document.getElementById('pwaStatus');
+    const el2 = document.getElementById('pwaDesc');
+    if (el) el.textContent = title;
+    if (el2) el2.textContent = desc;
+}
+
+// ==================== OFFLINE DETECTION ====================
+function updateOnlineStatus() {
+    const badge = document.getElementById('offlineBadge');
+    if (!navigator.onLine) {
+        badge.classList.add('show');
+    } else {
+        badge.classList.remove('show');
+    }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ==================== INIT ====================
+function init() {
+    loadState();
+    ensureToday();
+    renderActivityGrid();
+    updateClock();
+    setInterval(updateClock, 1000);
+    setInterval(autoSaveCurrent, 30000);
+    showView('now');
+    setInterval(checkMidnight, 1000);
+    
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.getElementById('installBanner').classList.remove('show');
+    }
+}
+
+function loadState() {
+    const saved = localStorage.getItem('lifelog_data');
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        state.activities = parsed.activities || {};
+        state.logs = parsed.logs || {};
+        state.current = parsed.current || null;
+        state.custom = parsed.custom || {};
+    }
+    Object.keys(DEFAULT_ACTIVITIES).forEach(k => {
+        if (!state.activities[k]) state.activities[k] = DEFAULT_ACTIVITIES[k];
+    });
+}
+
+function saveState() {
+    localStorage.setItem('lifelog_data', JSON.stringify({
+        activities: state.activities,
+        logs: state.logs,
+        current: state.current,
+        custom: state.custom
+    }));
+}
+
+function getAct(id) {
+    return state.activities[id] || state.custom[id] || UNKNOWN;
+}
+
+// ==================== TIME HELPERS ====================
+function fmtDate(d) {
+    return d.toISOString().split('T')[0];
+}
+
+function fmtTime(d) {
+    return d.toTimeString().slice(0, 8);
+}
+
+function fmtDuration(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function parseTime(t) {
+    const [h,m,s] = t.split(':').map(Number);
+    return h*3600 + m*60 + s;
+}
+
+function ensureToday() {
+    const today = fmtDate(new Date());
+    if (!state.logs[today]) state.logs[today] = [];
+    if (!state.current) {
+        state.current = { activity: 'unknown', start: new Date().toISOString() };
+    }
+}
+
+function checkMidnight() {
+    const now = new Date();
+    if (now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() === 0) {
+        switchActivity(state.current.activity, true);
+    }
+}
+
+// ==================== ACTIVITY SWITCHING ====================
+function switchActivity(actId, force = false) {
+    const now = new Date();
+    const today = fmtDate(now);
+    ensureToday();
+    
+    if (state.current) {
+        const prevStart = new Date(state.current.start);
+        const prevDate = fmtDate(prevStart);
+        
+        if (prevDate !== today) {
+            const midnight = new Date(prevStart);
+            midnight.setHours(23,59,59);
+            pushLog(prevDate, state.current.activity, fmtTime(prevStart), '23:59:59');
+            pushLog(today, state.current.activity, '00:00:00', fmtTime(now));
+        } else {
+            pushLog(today, state.current.activity, fmtTime(prevStart), fmtTime(now));
+        }
+    }
+    
+    state.current = { activity: actId, start: now.toISOString() };
+    saveState();
+    renderActivityGrid();
+    updateClock();
+    showToast(`Started: ${getAct(actId).name}`);
+}
+
+function pushLog(date, act, start, end) {
+    if (!state.logs[date]) state.logs[date] = [];
+    state.logs[date].push({ activity: act, start, end });
+}
+
+function addCustomAndStart() {
+    const name = document.getElementById('customName').value.trim();
+    if (!name) return;
+    const id = 'cust_' + Date.now();
+    state.custom[id] = { name, color: '#00e5ff', icon: '✨' };
+    document.getElementById('customName').value = '';
+    saveState();
+    renderActivityGrid();
+    switchActivity(id);
+}
+
+function autoSaveCurrent() {
+    if (state.current) saveState();
+}
+
+// ==================== RENDER: NOW ====================
+function renderActivityGrid() {
+    const grid = document.getElementById('activityGrid');
+    grid.innerHTML = '';
+    
+    [...Object.keys(state.activities), ...Object.keys(state.custom)].forEach(id => {
+        const act = getAct(id);
+        const btn = document.createElement('button');
+        btn.className = 'activity-btn' + (state.current?.activity === id ? ' active' : '');
+        btn.onclick = () => switchActivity(id);
+        btn.innerHTML = `
+            <span class="act-icon">${act.icon}</span>
+            <span class="act-name">${act.name}</span>
+        `;
+        grid.appendChild(btn);
+    });
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('clockTime').textContent = fmtTime(now);
+    document.getElementById('clockDate').textContent = now.toLocaleDateString('en-US', { 
+        weekday: 'long', month: 'long', day: 'numeric' 
+    });
+    document.getElementById('headerDate').textContent = now.toLocaleDateString('en-US', { 
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    });
+    
+    if (state.current) {
+        const act = getAct(state.current.activity);
+        const start = new Date(state.current.start);
+        const sec = Math.floor((now - start) / 1000);
+        
+        document.getElementById('currentName').textContent = act.name;
+        document.getElementById('currentDuration').textContent = fmtDuration(sec);
+        document.getElementById('currentSince').textContent = 'Since ' + start.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('currentCard').style.setProperty('--current-color', act.color);
+    }
+}
+
+// ==================== RENDER: TIMELINE ====================
+function changeDay(delta) {
+    state.viewDate.setDate(state.viewDate.getDate() + delta);
+    renderTimeline();
+}
+
+function renderTimeline() {
+    const date = fmtDate(state.viewDate);
+    const isToday = date === fmtDate(new Date());
+    document.getElementById('timelineDate').textContent = isToday ? 'Today' : state.viewDate.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    
+    const container = document.getElementById('timelineContent');
+    const logs = state.logs[date] || [];
+    
+    if (logs.length === 0 && !isToday) {
+        container.innerHTML = `
+            <div class="empty-day">
+                <div class="icon">📭</div>
+                <div>No data for this day</div>
+            </div>`;
+        return;
+    }
+    
+    let items = [...logs];
+    if (isToday && state.current) {
+        items.push({
+            activity: state.current.activity,
+            start: fmtTime(new Date(state.current.start)),
+            end: fmtTime(new Date()),
+            isLive: true
+        });
+    }
+    
+    items.sort((a,b) => parseTime(a.start) - parseTime(b.start));
+    const daySec = 86400;
+    
+    let html = '<div class="timeline">';
+    items.forEach(item => {
+        const act = getAct(item.activity);
+        const startSec = parseTime(item.start);
+        const endSec = parseTime(item.end);
+        const dur = endSec - startSec;
+        const pct = Math.max((dur / daySec) * 100, 0.5);
+        
+        html += `
+            <div class="timeline-item" style="--item-color: ${act.color}">
+                <div class="timeline-time">${item.start.slice(0,5)}–${item.end.slice(0,5)}</div>
+                <div class="timeline-info">
+                    <div class="timeline-name">${act.icon} ${act.name}${item.isLive ? ' ●' : ''}</div>
+                    <div class="timeline-duration">${fmtDuration(dur)}</div>
+                    <div class="timeline-bar">
+                        <div class="timeline-bar-fill" style="width: ${pct}%; background: ${act.color}"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    const totals = {};
+    items.forEach(i => {
+        const dur = parseTime(i.end) - parseTime(i.start);
+        totals[i.activity] = (totals[i.activity] || 0) + dur;
+    });
+    
+    html += '<div class="section-title">Day Summary</div><div class="stat-card">';
+    Object.entries(totals)
+        .sort((a,b) => b[1] - a[1])
+        .forEach(([id, sec]) => {
+            const act = getAct(id);
+            html += `
+                <div class="stat-row">
+                    <div class="stat-label">
+                        <div class="stat-dot" style="background:${act.color}"></div>
+                        ${act.name}
+                    </div>
+                    <div class="stat-value">${fmtDuration(sec)}</div>
+                </div>
+            `;
+        });
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+// ==================== RENDER: HISTORY ====================
+function changeMonth(delta) {
+    state.calDate.setMonth(state.calDate.getMonth() + delta);
+    renderCalendar();
+}
+
+function renderCalendar() {
+    const d = state.calDate;
+    document.getElementById('calMonth').textContent = d.toLocaleDateString('en-US', {month:'long', year:'numeric'});
+    
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(day => {
+        const el = document.createElement('div');
+        el.className = 'cal-header';
+        el.textContent = day;
+        grid.appendChild(el);
+    });
+    
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const today = fmtDate(new Date());
+    
+    for (let i = 0; i < firstDay; i++) {
+        grid.appendChild(document.createElement('div'));
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const cell = document.createElement('div');
+        cell.className = 'cal-day';
+        cell.textContent = day;
+        
+        if (dateStr === today) cell.classList.add('today');
+        
+        const logs = state.logs[dateStr];
+        if (logs && logs.length > 0) {
+            cell.classList.add('has-data');
+            const totals = {};
+            logs.forEach(l => {
+                const dur = parseTime(l.end) - parseTime(l.start);
+                totals[l.activity] = (totals[l.activity] || 0) + dur;
+            });
+            const dom = Object.entries(totals).sort((a,b) => b[1]-a[1])[0][0];
+            const color = getAct(dom).color;
+            cell.style.setProperty('--day-color', color);
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.style.background = color;
+            cell.appendChild(dot);
+        }
+        
+        cell.onclick = () => {
+            state.viewDate = new Date(dateStr);
+            showView('timeline');
+            renderTimeline();
+        };
+        
+        grid.appendChild(cell);
+    }
+}
+
+// ==================== RENDER: STATS ====================
+function setPeriod(p) {
+    state.statsPeriod = p;
+    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    renderStats();
+}
+
+function renderStats() {
+    const container = document.getElementById('statsContent');
+    const now = new Date();
+    let startDate, endDate;
+    
+    if (state.statsPeriod === 'week') {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 7);
+        startDate = d; endDate = now;
+    } else if (state.statsPeriod === 'month') {
+        const d = new Date(now);
+        d.setMonth(d.getMonth() - 1);
+        startDate = d; endDate = now;
+    } else if (state.statsPeriod === 'year') {
+        const d = new Date(now);
+        d.setFullYear(d.getFullYear() - 1);
+        startDate = d; endDate = now;
+    } else {
+        startDate = new Date('2000-01-01'); endDate = now;
+    }
+    
+    const totals = {};
+    let totalSec = 0;
+    
+    Object.entries(state.logs).forEach(([date, logs]) => {
+        const d = new Date(date);
+        if (d >= startDate && d <= endDate) {
+            logs.forEach(l => {
+                const dur = parseTime(l.end) - parseTime(l.start);
+                totals[l.activity] = (totals[l.activity] || 0) + dur;
+                totalSec += dur;
+            });
+        }
+    });
+    
+    if (state.current) {
+        const dur = Math.floor((now - new Date(state.current.start)) / 1000);
+        totals[state.current.activity] = (totals[state.current.activity] || 0) + dur;
+        totalSec += dur;
+    }
+    
+    if (totalSec === 0) {
+        container.innerHTML = '<div class="empty-day"><div class="icon">📊</div><div>No data yet. Start tracking!</div></div>';
+        return;
+    }
+    
+    let html = '<div class="stat-card">';
+    const sorted = Object.entries(totals).sort((a,b) => b[1]-a[1]);
+    
+    sorted.forEach(([id, sec]) => {
+        const act = getAct(id);
+        const pct = ((sec / totalSec) * 100).toFixed(1);
+        html += `
+            <div class="stat-row">
+                <div class="stat-label">
+                    <div class="stat-dot" style="background:${act.color}"></div>
+                    ${act.name}
+                </div>
+                <div class="stat-value">${pct}% · ${fmtDuration(sec)}</div>
+            </div>
+            <div class="stat-bar-bg">
+                <div class="stat-bar-fill" style="width:${pct}%; background:${act.color}"></div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    const days = (totalSec / 86400).toFixed(1);
+    html += `
+        <div class="stat-card" style="text-align:center; padding:24px;">
+            <div style="font-size:32px; font-weight:700; color:var(--accent);">${days}</div>
+            <div style="font-size:13px; color:var(--text2); margin-top:4px;">days tracked</div>
+            <div style="font-size:14px; color:var(--text2); margin-top:8px;">${fmtDuration(totalSec)} total</div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// ==================== NAVIGATION ====================
+function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    
+    const idx = ['now','timeline','history','stats','settings'].indexOf(name);
+    if (idx >= 0) document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+    
+    if (name === 'timeline') renderTimeline();
+    if (name === 'history') renderCalendar();
+    if (name === 'stats') renderStats();
+}
+
+// ==================== SETTINGS ====================
+function exportData() {
+    const data = JSON.stringify({...state, exported: new Date().toISOString()}, null, 2);
+    const blob = new Blob([data], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lifelog_backup_${fmtDate(new Date())}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Backup downloaded');
+}
+
+function importData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.logs) {
+                state.activities = data.activities || state.activities;
+                state.logs = data.logs;
+                state.current = data.current;
+                state.custom = data.custom || {};
+                saveState();
+                showToast('Data restored!');
+                renderActivityGrid();
+            }
+        } catch(err) {
+            showToast('Invalid file');
+        }
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+function showResetModal() { document.getElementById('resetModal').classList.add('active'); }
+function hideResetModal() { document.getElementById('resetModal').classList.remove('active'); }
+
+function resetAll() {
+    localStorage.removeItem('lifelog_data');
+    state.logs = {};
+    state.current = null;
+    state.custom = {};
+    hideResetModal();
+    showToast('All data erased');
+    renderActivityGrid();
+    showView('now');
+}
+
+// ==================== UTILS ====================
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Start
+init();
+</script>
+</body>
+</html>
